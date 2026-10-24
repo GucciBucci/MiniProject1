@@ -398,7 +398,7 @@ void Generate_Key_Pair(BIGNUM *p, BIGNUM *q, BIGNUM *g, BIGNUM **private_key, BI
     BN_add(*private_key, *private_key, BN_value_one());
     BN_mod_exp(*public_key, g, *private_key, p, ctx);
 
-    free(random_bytes);
+    free(rndBytes);
     BN_free(q_minus_1);
     BN_CTX_free(ctx);
 }
