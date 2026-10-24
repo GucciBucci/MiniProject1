@@ -371,7 +371,38 @@ void Generate_Key_Pair(BIGNUM *p, BIGNUM *q, BIGNUM *g, BIGNUM **private_key, BI
 /*============================
     YOUR CODE HERE
 ==============================*/
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *q_minus_1 = BN_new();
+    
+    if (*public_key == NULL) {
+    *public_key = BN_new();
+    }
+
+    if (*private_key == NULL) {
+        *private_key = BN_new();
+    }
+    
+    unsigned char newSeed[32];
+    for (int i = 0; i < 32; i++) {
+        newSeed[i] = seed[i] + seed_offset;
+    }
+
+    int numBytes = BN_num_bytes(32);
+    unsigned char* rndBytes = (unsigned char*)malloc(numBytes); 
+    PRNG(newSeed, 32, rndBytes, numBytes);
+
+    BN_bin2bn(rndBytes, numBytes, *private_key);
+
+    BN_sub(q_minus_1, q, BN_value_one());
+    BN_mod(*private_key, *private_key, q_minus_1, ctx);
+    BN_add(*private_key, *private_key, BN_value_one());
+    BN_mod_exp(*public_key, g, *private_key, p, ctx);
+
+    free(random_bytes);
+    BN_free(q_minus_1);
+    BN_CTX_free(ctx);
 }
+
 
 /*============================
     Show BIGNUM
