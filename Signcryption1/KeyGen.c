@@ -388,8 +388,7 @@ void Generate_Key_Pair(BIGNUM *p, BIGNUM *q, BIGNUM *g, BIGNUM **private_key, BI
     }
 
     int numBytes = BN_num_bytes(q);
-    unsigned char* rndBytes = (unsigned char*)malloc(numBytes); 
-    PRNG(newSeed, 32, rndBytes, numBytes);
+    unsigned char* rndBytes = PRNG(newSeed, 32, numBytes);
 
     BN_bin2bn(rndBytes, numBytes, *private_key);
 
