@@ -371,33 +371,43 @@ void Generate_Key_Pair(BIGNUM *p, BIGNUM *q, BIGNUM *g, BIGNUM **private_key, BI
 /*============================
     YOUR CODE HERE
 ==============================*/
+    // intializes BN variables
+    // ctx(context) stores intermerdiate calculations
     BN_CTX *ctx = BN_CTX_new();
     BIGNUM *q_minus_1 = BN_new();
     
+    // intializes BN variables for keys
     if (*public_key == NULL) {
-    *public_key = BN_new();
+        *public_key = BN_new();
     }
 
     if (*private_key == NULL) {
         *private_key = BN_new();
     }
     
+    // offsets each bit of given seed by offset amount
     unsigned char newSeed[32];
     for (int i = 0; i < 32; i++) {
         newSeed[i] = seed[i] + seed_offset;
     }
 
     int numBytes = BN_num_bytes(q);
-    unsigned char* rndBytes = PRNG(newSeed, 32, numBytes);
+    unsigned char* NewPrivateKey = PRNG(newSeed, 32, numBytes);
 
-    BN_bin2bn(rndBytes, numBytes, *private_key);
-
+    // converts int to BN
+    BN_bin2bn(NewPrivateKey, numBytes, *private_key);
+    
+    // q-1
     BN_sub(q_minus_1, q, BN_value_one());
+    
+    // remainder, a, mod, context
+    // between (0 and q-1)
     BN_mod(*private_key, *private_key, q_minus_1, ctx);
-    BN_add(*private_key, *private_key, BN_value_one());
+    BN_add(*private_key, *private_key, BN_value_one()); // add 1 to make it between (1 and q-1)
+    // g^(private_key) mod p
     BN_mod_exp(*public_key, g, *private_key, p, ctx);
-
-    free(rndBytes);
+    
+    free(NewPrivateKey);
     BN_free(q_minus_1);
     BN_CTX_free(ctx);
 }
