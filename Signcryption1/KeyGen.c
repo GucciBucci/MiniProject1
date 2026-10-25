@@ -387,7 +387,7 @@ void Generate_Key_Pair(BIGNUM *p, BIGNUM *q, BIGNUM *g, BIGNUM **private_key, BI
         newSeed[i] = seed[i] + seed_offset;
     }
 
-    int numBytes = BN_num_bytes(32);
+    int numBytes = BN_num_bytes(q);
     unsigned char* rndBytes = (unsigned char*)malloc(numBytes); 
     PRNG(newSeed, 32, rndBytes, numBytes);
 
