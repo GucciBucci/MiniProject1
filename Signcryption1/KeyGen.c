@@ -391,6 +391,8 @@ void Generate_Key_Pair(BIGNUM *p, BIGNUM *q, BIGNUM *g, BIGNUM **private_key, BI
         newSeed[i] = seed[i] + seed_offset;
     }
 
+    
+    
     int numBytes = BN_num_bytes(q);
     unsigned char* NewPrivateKey = PRNG(newSeed, 32, numBytes);
 
@@ -404,9 +406,10 @@ void Generate_Key_Pair(BIGNUM *p, BIGNUM *q, BIGNUM *g, BIGNUM **private_key, BI
     // between (0 and q-1)
     BN_mod(*private_key, *private_key, q_minus_1, ctx);
     BN_add(*private_key, *private_key, BN_value_one()); // add 1 to make it between (1 and q-1)
+    
     // g^(private_key) mod p
     BN_mod_exp(*public_key, g, *private_key, p, ctx);
-    
+
     free(NewPrivateKey);
     BN_free(q_minus_1);
     BN_CTX_free(ctx);
