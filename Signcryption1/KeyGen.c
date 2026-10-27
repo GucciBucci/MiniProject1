@@ -372,7 +372,6 @@ void Generate_Key_Pair(BIGNUM *p, BIGNUM *q, BIGNUM *g, BIGNUM **private_key, BI
     YOUR CODE HERE
 ==============================*/
     BN_CTX *ctx = BN_CTX_new(); // context
-    BIGNUM *q_minus_1 = BN_new();
     BIGNUM *raw_key = BN_new();
 
     if (*private_key == NULL) {
@@ -388,24 +387,30 @@ void Generate_Key_Pair(BIGNUM *p, BIGNUM *q, BIGNUM *g, BIGNUM **private_key, BI
     modified_seed[31] = (unsigned char)seed_offset;
 
     int numBytes = BN_num_bytes(q);
-    unsigned char *random_bytes = PRNG(modified_seed, 32, numBytes);
+    size_t random_len = (size_t)numBytes * 16;
+    unsigned char *random_bytes = PRNG(modified_seed, 32, random_len);
 
-    BN_bin2bn(random_bytes, numBytes, raw_key);
+    for (size_t offset = 0; offset < random_len; offset += numBytes) {
+        BN_bin2bn(random_bytes + offset, numBytes, raw_key);
+        BN_mod(*private_key, raw_key, q, ctx);
 
-    BN_sub(q_minus_1, q, BN_value_one());
-    BN_mod(*private_key, raw_key, q_minus_1, ctx);
+        if (!BN_is_zero(*private_key)) {
+            break;
+        }
+    }
 
-    // Make sure PK is not 0
     if (BN_is_zero(*private_key)) {
-        printf("Private key is zero, setting to 1\n");
-        BN_one(*private_key);
+        fprintf(stderr, "Unable to generate a non-zero key\n");
+        free(random_bytes);
+        BN_free(raw_key);
+        BN_CTX_free(ctx);
+        exit(1);
     }
 
     BN_mod_exp(*public_key, g, *private_key, p, ctx);
 
     free(random_bytes);
     BN_free(raw_key);
-    BN_free(q_minus_1);
     BN_CTX_free(ctx);
 }
 
