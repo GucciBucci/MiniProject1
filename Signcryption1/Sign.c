@@ -440,6 +440,18 @@ void Signcrypt(BIGNUM *p, BIGNUM *q, BIGNUM *g, const unsigned char *message, si
 /*============================
     YOUR CODE HERE
 ==============================*/
+
+    //Context
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *x = BN_new();
+    BIGNUM *w = BN_new();
+
+    unsigned char modified_seed[32];
+    memcpy(modified_seed, seed, 32);
+    modified_seed[31] = (unsigned char)seed_offset;
+
+    int numBytes = BN_num_bytes(q);
+    unsigned char *random_bytes = PRNG(modified_seed, 32, numBytes);
 }
 
 /*============================
