@@ -102,6 +102,12 @@ int main(int argc, char* argv[])
     Show_BN("Alice's private key (x_a)", alice_private_key);
     Show_BN("Alice's public key (y_a)", alice_public_key);
 
+    BIGNUM *derived_alice_public_key = BN_new();
+    BN_CTX *derived_key_ctx = BN_CTX_new();
+    BN_mod_exp(derived_alice_public_key, g, alice_private_key, p, derived_key_ctx);
+    Show_BN("Derived Alice's public key (y_a)", derived_alice_public_key);
+    BN_CTX_free(derived_key_ctx);
+
     printf("\n==================================================\n");
 
     // Read Bob's public key
@@ -167,6 +173,7 @@ int main(int argc, char* argv[])
     BN_free(g);
     BN_free(alice_private_key);
     BN_free(alice_public_key);
+    BN_free(derived_alice_public_key);
     BN_free(bob_public_key);
     BN_free(r);
     BN_free(s);
@@ -443,7 +450,7 @@ void Signcrypt(BIGNUM *p, BIGNUM *q, BIGNUM *g, const unsigned char *message, si
 
     //Context
     BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *x = BN_new();
+    BIGNUM *random_x = BN_new();
     BIGNUM *w = BN_new();
 
     unsigned char modified_seed[32];
@@ -451,7 +458,73 @@ void Signcrypt(BIGNUM *p, BIGNUM *q, BIGNUM *g, const unsigned char *message, si
     modified_seed[31] = (unsigned char)seed_offset;
 
     int numBytes = BN_num_bytes(q);
-    unsigned char *random_bytes = PRNG(modified_seed, 32, numBytes);
+    size_t random_len = (size_t)numBytes * 16;
+    unsigned char *random_bytes = PRNG(modified_seed, 32, random_len);
+
+    for (size_t offset = 0; offset < random_len; offset += numBytes) {
+        BN_bin2bn(random_bytes + offset, numBytes, random_x);
+        BN_mod(random_x, random_x, q, ctx);
+
+        if (!BN_is_zero(random_x)) {
+            break;
+        }
+    }
+
+    if (BN_is_zero(random_x)) {
+        fprintf(stderr, "Unable to generate a non-zero ephemeral value\n");
+        exit(1);
+    }
+
+    printf("Step a) Pick random x in {1, ..., q-1}\n");
+    Show_BN("x", random_x);
+
+    if (BN_mod_exp(w, bob_public_key, random_x, p, ctx) != 1) {
+        fprintf(stderr, "Unable to compute the shared secret\n");
+        exit(1);
+    }
+
+    printf("Step b) Compute w = y_b^x mod p\n");
+    Show_BN("w", w);
+
+    unsigned char key[16];
+    Hash_G(w, key, sizeof(key));
+    printf("Step c) Derive encryption key k = G(w)\n");
+    Show_Hex("k", key, sizeof(key));
+
+    *r = BN_new();
+    *s = BN_new();
+
+    Hash_H(message, message_len, w, *r);
+    printf("Step d) Compute r = H(m,w)\n");
+    Show_BN("r", *r);
+
+    BIGNUM *denominator = BN_new();
+    BIGNUM *inverse = NULL;
+
+    BN_add(denominator, *r, alice_private_key);
+    BN_mod(denominator, denominator, q, ctx);
+
+    inverse = BN_mod_inverse(NULL, denominator, q, ctx);
+    if (inverse == NULL) {
+        fprintf(stderr, "Unable to invert r + Alice's private key\n");
+        exit(1);
+    }
+
+    BN_mod_mul(*s, random_x, inverse, q, ctx);
+    printf("Step e) Compute s = x/(r + x_a) mod q\n");
+    Show_BN("s", *s);
+
+    Encrypt_Message(key, message, message_len, ciphertext, ciphertext_len, seed, seed_len);
+    printf("Step f) Encrypt the message c = E_k(m)\n");
+    Show_Hex("c", *ciphertext, *ciphertext_len);
+
+    free(random_bytes);
+    BN_free(random_x);
+    BN_free(w);
+    BN_free(denominator);
+    BN_free(inverse);
+    BN_CTX_free(ctx);
+
 }
 
 /*============================
