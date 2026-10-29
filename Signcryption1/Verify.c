@@ -412,9 +412,54 @@ int Decrypt_Message(const unsigned char *key, const unsigned char *ciphertext, s
 ==============================*/
 int Unsigncrypt(BIGNUM *p, BIGNUM *q, BIGNUM *g, BIGNUM *r, BIGNUM *s, const unsigned char *ciphertext, size_t ciphertext_len, BIGNUM *bob_private_key, BIGNUM *alice_public_key, unsigned char **message, size_t *message_len)
 {
-/*============================
-    YOUR CODE HERE
-==============================*/
+    /*============================
+        YOUR CODE HERE
+    ==============================*/
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *g_to_r = BN_new();
+    BIGNUM *shared_base = BN_new();
+    BIGNUM *shared_exponent = BN_new();
+    BIGNUM *w = BN_new();
+    BIGNUM *r_check = BN_new();
+    unsigned char key[16];
+    int valid = 0;
+
+    *message = NULL;
+    *message_len = 0;
+
+    if (ciphertext_len < 16 || (ciphertext_len - 16) % 16 != 0) {
+        goto cleanup;
+    }
+
+    /* w = (y_a * g^r)^(s*x_b) mod p */
+    BN_mod_exp(g_to_r, g, r, p, ctx);
+    BN_mod_mul(shared_base, alice_public_key, g_to_r, p, ctx);
+    BN_mod_mul(shared_exponent, s, bob_private_key, q, ctx);
+    BN_mod_exp(w, shared_base, shared_exponent, p, ctx);
+
+    Hash_G(w, key, sizeof(key));
+
+    if (Decrypt_Message(key, ciphertext, ciphertext_len, message, message_len) != 1) {
+        goto cleanup;
+    }
+
+    Hash_H(*message, *message_len, w, r_check);
+    valid = BN_cmp(r, r_check) == 0;
+
+    cleanup:
+        if (!valid && *message != NULL) {
+            free(*message);
+            *message = NULL;
+            *message_len = 0;
+        }
+
+    BN_free(g_to_r);
+    BN_free(shared_base);
+    BN_free(shared_exponent);
+    BN_free(w);
+    BN_free(r_check);
+    BN_CTX_free(ctx);
+    return valid;
 }
 
 /*============================

@@ -514,7 +514,7 @@ void Signcrypt(BIGNUM *p, BIGNUM *q, BIGNUM *g, const unsigned char *message, si
     printf("Step e) Compute s = x/(r + x_a) mod q\n");
     Show_BN("s", *s);
 
-    Encrypt_Message(key, message, message_len, ciphertext, ciphertext_len, seed, seed_len);
+    Encrypt_Message(key, message, message_len, ciphertext, ciphertext_len, modified_seed, seed_len);
     printf("Step f) Encrypt the message c = E_k(m)\n");
     Show_Hex("c", *ciphertext, *ciphertext_len);
 
