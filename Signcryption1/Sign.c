@@ -1,3 +1,4 @@
+
 ///////////////////////////////
 //   Alice as a Signer      //
 //////////////////////////////
@@ -452,6 +453,7 @@ void Signcrypt(BIGNUM *p, BIGNUM *q, BIGNUM *g, const unsigned char *message, si
     BN_CTX *ctx = BN_CTX_new();
     BIGNUM *random_x = BN_new();
     BIGNUM *w = BN_new();
+    BIGNUM *temp = BN_new();
 
     unsigned char modified_seed[32];
     memcpy(modified_seed, seed, 32);
