@@ -1,3 +1,4 @@
+
 ///////////////////////////////
 //   Alice as a Signer      //
 //////////////////////////////
@@ -484,12 +485,16 @@ void Signcrypt(BIGNUM *p, BIGNUM *q, BIGNUM *g, const unsigned char *message, si
     }
 
     printf("Step b) Compute w = y_b^x mod p\n");
+    BN_exp(w, w, random_x, ctx);
+    BN_mod(w, p, w, ctx);
     Show_BN("w", w);
 
     unsigned char key[16];
     Hash_G(w, key, sizeof(key));
     printf("Step c) Derive encryption key k = G(w)\n");
     Show_Hex("k", key, sizeof(key));
+
+    // c = EcryptMessage
 
     *r = BN_new();
     *s = BN_new();
