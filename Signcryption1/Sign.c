@@ -457,17 +457,13 @@ void Signcrypt(BIGNUM *p, BIGNUM *q, BIGNUM *g, const unsigned char *message, si
     memcpy(modified_seed, seed, 32);
     modified_seed[31] = (unsigned char)seed_offset;
 
-    int numBytes = BN_num_bytes(q);
-    size_t random_len = (size_t)numBytes * 16;
-    unsigned char *random_bytes = PRNG(modified_seed, 32, random_len);
-
-    for (size_t offset = 0; offset < random_len; offset += numBytes) {
-        BN_bin2bn(random_bytes + offset, numBytes, random_x);
-        BN_mod(random_x, random_x, q, ctx);
-
-        if (!BN_is_zero(random_x)) {
-            break;
-        }
+    unsigned char *x_seed = PRNG(modified_seed, 32, 32);
+    unsigned char *random_bytes = PRNG(x_seed, 32, 32);
+    free(x_seed);
+    BN_bin2bn(random_bytes, 32, random_x);
+    BN_mod(random_x, random_x, q, ctx);
+    if (BN_is_zero(random_x)) {
+        BN_set_word(random_x, 1);
     }
 
     if (BN_is_zero(random_x)) {
