@@ -492,7 +492,7 @@ void Signcrypt(BIGNUM *p, BIGNUM *q, BIGNUM *g, const unsigned char *message, si
     BIGNUM *one = BN_new();
     
     BN_one(one);
-    BN_mul(denominator, denominator, *r, ctx);
+    BN_mul(denominator, alice_private_key, *r, ctx);
     BN_add(denominator, denominator, one);
 
     inverse = BN_mod_inverse(NULL, denominator, q, ctx);
