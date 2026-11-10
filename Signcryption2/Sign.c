@@ -440,6 +440,83 @@ void Signcrypt(BIGNUM *p, BIGNUM *q, BIGNUM *g, const unsigned char *message, si
 /*============================
     YOUR CODE HERE
 ==============================*/
+
+    //Context
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *random_x = BN_new();
+    BIGNUM *w = BN_new();
+
+    unsigned char modified_seed[32];
+    memcpy(modified_seed, seed, 32);
+    modified_seed[31] = (unsigned char)seed_offset;
+
+    unsigned char *x_seed = PRNG(modified_seed, 32, 32);
+    unsigned char *random_bytes = PRNG(x_seed, 32, 32);
+    free(x_seed);
+    BN_bin2bn(random_bytes, 32, random_x);
+    BN_mod(random_x, random_x, q, ctx);
+    if (BN_is_zero(random_x)) {
+        BN_set_word(random_x, 1);
+    }
+
+    if (BN_is_zero(random_x)) {
+        fprintf(stderr, "Unable to generate a non-zero ephemeral value\n");
+        exit(1);
+    }
+
+    printf("Step a) Pick random x in {1, ..., q-1}\n");
+    Show_BN("x", random_x);
+
+    if (BN_mod_exp(w, bob_public_key, random_x, p, ctx) != 1) {
+        fprintf(stderr, "Unable to compute the shared secret\n");
+        exit(1);
+    }
+
+    printf("Step b) Compute w = y_b^x mod p\n");
+    Show_BN("w", w);
+
+    unsigned char key[16];
+    Hash_G(w, key, sizeof(key));
+    printf("Step c) Derive encryption key k = G(w)\n");
+    Show_Hex("k", key, sizeof(key));
+
+    *r = BN_new();
+    *s = BN_new();
+
+    Hash_H(message, message_len, w, *r);
+    printf("Step d) Compute r = H(m,w)\n");
+    Show_BN("r", *r);
+    
+    BIGNUM *denominator = BN_new();
+    BIGNUM *inverse = NULL;
+    BIGNUM *one = BN_new();
+    
+    BN_one(one);
+    BN_mul(denominator, denominator, *r, ctx);
+    BN_add(denominator, denominator, one);
+
+    inverse = BN_mod_inverse(NULL, denominator, q, ctx);
+    if (inverse == NULL) {
+        fprintf(stderr, "Unable to invert r + Alice's private key\n");
+        exit(1);
+    }
+
+    BN_mod_mul(*s, random_x, inverse, q, ctx);
+    printf("Step e) Compute s = x/(1 + r * x_a) mod q\n");
+    Show_BN("s", *s);
+
+        Encrypt_Message(key, message, message_len, ciphertext, ciphertext_len, modified_seed, seed_len);
+    printf("Step f) Encrypt the message c = E_k(m)\n");
+    Show_Hex("c", *ciphertext, *ciphertext_len);
+
+    free(random_bytes);
+    BN_free(random_x);
+    BN_free(w);
+    BN_free(denominator);
+    BN_free(inverse);
+    BN_free(one);
+    BN_CTX_free(ctx);
+
 }
 
 /*============================
