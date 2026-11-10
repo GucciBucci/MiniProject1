@@ -492,12 +492,13 @@ void Signcrypt(BIGNUM *p, BIGNUM *q, BIGNUM *g, const unsigned char *message, si
     BIGNUM *one = BN_new();
     
     BN_one(one);
-    BN_mul(denominator, denominator, *r, ctx);
+    BN_mod_mul(denominator, alice_private_key, *r, q, ctx);
     BN_add(denominator, denominator, one);
+    BN_mod(denominator, denominator, q, ctx);
 
     inverse = BN_mod_inverse(NULL, denominator, q, ctx);
     if (inverse == NULL) {
-        fprintf(stderr, "Unable to invert r + Alice's private key\n");
+        fprintf(stderr, "Unable to invert 1 + r * Alice's private key\n");
         exit(1);
     }
 

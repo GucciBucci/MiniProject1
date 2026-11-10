@@ -437,7 +437,7 @@ int Unsigncrypt(BIGNUM *p, BIGNUM *q, BIGNUM *g, BIGNUM *r, BIGNUM *s, const uns
     // g * y_a^r
     BN_mod_mul(shared_base, g, y_to_r, p, ctx);
     // s * x_b
-    BN_mod_mul(shared_exponent, s, bob_private_key, p, ctx);
+    BN_mod_mul(shared_exponent, s, bob_private_key, q, ctx);
     BN_mod_exp(w, shared_base, shared_exponent, p, ctx);
 
     Hash_G(w, key, sizeof(key));
